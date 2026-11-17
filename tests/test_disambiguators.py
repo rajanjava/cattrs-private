@@ -1,6 +1,7 @@
 """Tests for auto-disambiguators."""
 
 from dataclasses import dataclass
+from dataclasses import field as dc_field
 from functools import partial
 from itertools import permutations
 from typing import Literal, Union
@@ -495,3 +496,35 @@ def test_dataclasses_literals(converter):
 
     assert converter.structure({"a": "a"}, Union[A, B]) == A()
     assert converter.structure({"b": "b"}, Union[A, B]) == B("b")
+
+
+def test_dataclasses_default_factory(converter):
+    """Dataclass fields with default_factory should not be treated as required."""
+
+    @dataclass
+    class A:
+        shared: int
+        items: list[str] = dc_field(default_factory=list)
+
+    @dataclass
+    class B:
+        shared: int
+        b: int
+
+    assert converter.structure({"shared": 1}, Union[A, B]) == A(shared=1, items=[])
+    assert converter.structure({"shared": 1, "b": 2}, Union[A, B]) == B(shared=1, b=2)
+    assert converter.structure({"shared": 1, "items": ["x"]}, Union[A, B]) == A(
+        shared=1, items=["x"]
+    )
+
+    @dataclass
+    class C:
+        c: int = dc_field(default_factory=int)
+
+    @dataclass
+    class D:
+        d: int = dc_field(default_factory=int)
+
+    with pytest.raises(TypeError, match="no unique non-default attributes"):
+        create_default_dis_func(converter, C, D)
+

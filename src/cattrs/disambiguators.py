@@ -154,7 +154,11 @@ def create_default_dis_func(
             cl_fields = fields_dict(get_origin(cl) or cl)
             for maybe_renamed_attr_name in uniq:
                 orig_name = back_map[maybe_renamed_attr_name]
-                if cl_fields[orig_name].default in (NOTHING, MISSING):
+                field = cl_fields[orig_name]
+                if (
+                    field.default in (NOTHING, MISSING)
+                    and getattr(field, "default_factory", MISSING) is MISSING
+                ):
                     uniq_attrs_dict[maybe_renamed_attr_name] = cl
                     made_progress = True
                     break
